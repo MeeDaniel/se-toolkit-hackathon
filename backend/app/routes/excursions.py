@@ -14,16 +14,16 @@ router = APIRouter()
 @router.get("/", response_model=List[ExcursionResponse])
 async def get_excursions(
     user_id: int,
-    skip: int = 0,
-    limit: int = 100,
+    offset: int = 0,
+    limit: int = 10,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all excursions for a specific user"""
+    """Get excursions for a specific user with pagination"""
     result = await db.execute(
         select(Excursion)
         .where(Excursion.user_id == user_id)
         .order_by(Excursion.created_at.desc())
-        .offset(skip)
+        .offset(offset)
         .limit(limit)
     )
     excursions = result.scalars().all()

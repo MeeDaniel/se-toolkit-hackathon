@@ -22,9 +22,13 @@ function StatisticsDashboard({ user, refreshTrigger }) {
     }
   }, [user, refreshTrigger]);
 
-  const fetchData = async (userId, currentOffset) => {
+  const fetchData = async (userId, currentOffset, isLoadMore = false) => {
     try {
-      setLoading(true);
+      // Only show full loading state on initial load
+      if (!isLoadMore) {
+        setLoading(true);
+      }
+      
       const [statsRes, corrRes, excRes] = await Promise.all([
         axios.get(`${API_URL}/api/statistics/?user_id=${userId}`),
         axios.get(`${API_URL}/api/statistics/correlations?user_id=${userId}`),
@@ -35,7 +39,7 @@ function StatisticsDashboard({ user, refreshTrigger }) {
       setCorrelations(corrRes.data);
       
       // If loading more, append to existing data
-      if (currentOffset > 0) {
+      if (isLoadMore) {
         setExcursions(prev => [...prev, ...excRes.data]);
       } else {
         setExcursions(excRes.data);
@@ -56,11 +60,11 @@ function StatisticsDashboard({ user, refreshTrigger }) {
     const newOffset = offset + 10;
     setOffset(newOffset);
     if (user && user.id) {
-      fetchData(user.id, newOffset);
+      fetchData(user.id, newOffset, true);
     }
   };
 
-  if (loading) {
+  if (loading && excursions.length === 0) {
     return <div className="loading">Loading statistics...</div>;
   }
 

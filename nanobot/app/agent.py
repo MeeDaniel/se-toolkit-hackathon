@@ -127,7 +127,7 @@ class NanobotAgent:
         """Try to extract excursion data and store it"""
         try:
             import httpx
-            
+
             # Call backend to extract and store
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
@@ -137,9 +137,13 @@ class NanobotAgent:
                         "message": message
                     }
                 )
-                
+
                 if response.status_code == 200:
-                    return response.json()
+                    data = response.json()
+                    # Only return data if excursions were actually saved
+                    if isinstance(data, list) and len(data) > 0:
+                        return data
+                    return None
                 return None
         except Exception as e:
             print(f"Error storing excursion: {e}")
