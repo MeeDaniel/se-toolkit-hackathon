@@ -9,7 +9,7 @@ class LLMClient:
     def __init__(self):
         self.client = AsyncOpenAI(
             api_key=settings.MISTRAL_API_KEY,
-            base_url=settings.QWEN_BASE_URL,
+            base_url=settings.MISTRAL_BASE_URL,
         )
 
     async def get_response(
@@ -27,7 +27,7 @@ class LLMClient:
             ]
 
             response = await self.client.chat.completions.create(
-                model=settings.QWEN_MODEL,
+                model=settings.MISTRAL_MODEL,
                 messages=messages,
                 temperature=0.7,
                 max_tokens=1000,

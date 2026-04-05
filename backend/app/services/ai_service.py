@@ -9,7 +9,7 @@ class AIService:
     def __init__(self):
         self.client = AsyncOpenAI(
             api_key=settings.MISTRAL_API_KEY,
-            base_url=settings.QWEN_BASE_URL,
+            base_url=settings.MISTRAL_BASE_URL,
         )
 
     async def extract_excursion_data(self, message: str) -> AIExcursionExtraction:
@@ -34,7 +34,7 @@ JSON response:"""
 
         try:
             response = await self.client.chat.completions.create(
-                model=settings.QWEN_MODEL,
+                model=settings.MISTRAL_MODEL,
                 messages=[
                     {"role": "system", "content": "You extract structured data from text. Always return valid JSON."},
                     {"role": "user", "content": prompt}
@@ -107,7 +107,7 @@ Provide a clear, helpful answer with specific numbers and insights."""
 
         try:
             response = await self.client.chat.completions.create(
-                model=settings.QWEN_MODEL,
+                model=settings.MISTRAL_MODEL,
                 messages=[
                     {"role": "system", "content": "You analyze excursion statistics and provide insights."},
                     {"role": "user", "content": prompt}

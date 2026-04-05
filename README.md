@@ -61,7 +61,7 @@ Ubuntu 24.04 (LTS)
 ### Prerequisites
 - Docker and Docker Compose
 - Git
-- Qwen API key (for AI functionality)
+- Mistral API key (for AI functionality)
 - At least 2GB RAM
 - Ports 80 and 443 available
 
@@ -76,7 +76,7 @@ Ubuntu 24.04 (LTS)
 2. **Configure environment**
    ```bash
    cp .env.example .env
-   # Edit .env and add your Qwen API key
+   # Edit .env and add your Mistral API key
    ```
 
 3. **Start all services**
@@ -120,7 +120,7 @@ docker compose up -d
 ## Tech Stack
 
 - **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL
-- **AI Agent:** Nanobot framework, Qwen API, MCP (Model Context Protocol)
+- **AI Agent:** Nanobot framework, Mistral AI API, MCP (Model Context Protocol)
 - **Frontend:** React (TypeScript), WebSocket
 - **Infrastructure:** Docker Compose, Caddy (reverse proxy)
 - **Observability:** OpenTelemetry (basic)

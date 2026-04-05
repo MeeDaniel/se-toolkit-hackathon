@@ -25,7 +25,7 @@ The app is configured with `mistral-small-latest` by default, but you can use:
 
 To change the model, edit `.env`:
 ```env
-QWEN_MODEL=mistral-large-latest
+MISTRAL_MODEL=mistral-large-latest
 ```
 
 ## After Adding Your Key

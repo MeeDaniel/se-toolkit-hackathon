@@ -299,7 +299,7 @@ SELECT * FROM excursions;  # View data
 
 ## 📞 Next Steps for Production
 
-1. Add your Qwen API key to `.env`
+1. Add your Mistral API key to `.env`
 2. Deploy to Ubuntu VM
 3. Configure Caddy for HTTPS
 4. Set up domain name
