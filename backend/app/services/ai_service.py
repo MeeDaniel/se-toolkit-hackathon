@@ -35,7 +35,7 @@ CRITICAL RULES:
    - vivacity_before: float (0-1, energy level before tour)
    - vivacity_after: float (0-1, energy level after tour)
    - interest_in_it: float (0-1, interest in IT topics)
-   - interests_list: space-separated keywords of what tourists were interested in
+   - interests_list: space-separated keywords (CRITICAL: The database stores keywords separated by SPACES. Therefore each keyword MUST be exactly ONE WORD with ZERO spaces. Multi-word phrases like "machine learning" will be stored as TWO separate keywords "machine" and "learning" which breaks the data. You MUST convert all multi-word concepts to single words or acronyms. Examples: "machine learning"→"ML", "artificial intelligence"→"AI", "data science"→"datascience" or "DS", "computer vision"→"CV", "natural language processing"→"NLP". Remove all conjunctions ("and", "or"). Format: single words only separated by spaces. CORRECT: "robotics AI ML DS". WRONG: "robotics and AI" or "machine learning" or "data science".)
    - confidence: float (0-1, how confident you are about the extraction). Set to 0.0 if the message is not about excursions.
 
 Return ONLY a valid JSON array of excursion objects. Use null for unknown fields.
