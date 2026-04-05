@@ -72,6 +72,11 @@ class AIExcursionExtraction(BaseModel):
     raw_message: Optional[str] = None
 
 
+class ExcursionBatch(BaseModel):
+    excursions: list[AIExcursionExtraction]
+    raw_message: Optional[str] = None
+
+
 class StatisticsResponse(BaseModel):
     total_excursions: int
     avg_tourists_per_excursion: float

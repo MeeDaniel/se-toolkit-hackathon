@@ -65,33 +65,40 @@ async def create_excursion(
     return db_excursion
 
 
-@router.post("/from-message", response_model=ExcursionResponse)
+@router.post("/from-message", response_model=list[ExcursionResponse])
 async def create_excursion_from_message(
     data: ExcursionFromMessage,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create excursion by extracting data from natural language message"""
-    # Use AI to extract data
-    extracted = await ai_service.extract_excursion_data(data.message)
+    """Create excursion(s) by extracting data from natural language message.
+    Returns a list of created excursions (can be empty if message is not about excursions).
+    """
+    # Use AI to extract data - may return multiple excursions or none
+    batch = await ai_service.extract_excursion_data(data.message)
     
-    # Create excursion record
-    db_excursion = Excursion(
-        user_id=data.user_id,
-        number_of_tourists=extracted.number_of_tourists,
-        average_age=extracted.average_age,
-        age_distribution=extracted.age_distribution,
-        vivacity_before=extracted.vivacity_before,
-        vivacity_after=extracted.vivacity_after,
-        interest_in_it=extracted.interest_in_it,
-        interests_list=extracted.interests_list,
-        raw_message=data.message,
-    )
+    if not batch.excursions:
+        return []
     
-    db.add(db_excursion)
-    await db.flush()
-    await db.refresh(db_excursion)
+    # Save each excursion separately
+    created = []
+    for extracted in batch.excursions:
+        db_excursion = Excursion(
+            user_id=data.user_id,
+            number_of_tourists=extracted.number_of_tourists or 10,
+            average_age=extracted.average_age or 25.0,
+            age_distribution=extracted.age_distribution or 5.0,
+            vivacity_before=extracted.vivacity_before or 0.5,
+            vivacity_after=extracted.vivacity_after or 0.5,
+            interest_in_it=extracted.interest_in_it or 0.5,
+            interests_list=extracted.interests_list,
+            raw_message=data.message,
+        )
+        db.add(db_excursion)
+        await db.flush()
+        await db.refresh(db_excursion)
+        created.append(db_excursion)
     
-    return db_excursion
+    return created
 
 
 @router.delete("/{excursion_id}")

@@ -1,8 +1,11 @@
 from openai import AsyncOpenAI
 from app.config import settings
-from app.schemas import AIExcursionExtraction
+from app.schemas import AIExcursionExtraction, ExcursionBatch
 import json
 import re
+
+
+CONFIDENCE_THRESHOLD = 0.5  # Minimum confidence to save an excursion
 
 
 class AIService:
@@ -12,85 +15,84 @@ class AIService:
             base_url=settings.MISTRAL_BASE_URL,
         )
 
-    async def extract_excursion_data(self, message: str) -> AIExcursionExtraction:
-        """Extract excursion statistics from natural language message"""
+    async def extract_excursion_data(self, message: str) -> ExcursionBatch:
+        """Extract excursion statistics from natural language message.
+        Returns a batch of excursions (can be 0 if message is not about excursions).
+        """
         
-        prompt = f"""You are an assistant that extracts excursion statistics from natural language messages.
-Extract the following information from the message. If a field is not mentioned, use reasonable defaults or null:
-- number_of_tourists: integer (default: 10)
-- average_age: float (default: 25.0)
-- age_distribution: float 0-20 (default: 5.0)
-- vivacity_before: float 0-1 (default: 0.5)
-- vivacity_after: float 0-1 (default: 0.5)
-- interest_in_it: float 0-1 (default: 0.5)
-- interests_list: space-separated keywords (default: "general tourism")
+        prompt = f"""You are an assistant that extracts excursion statistics from natural language messages from tour guides.
 
-Return ONLY a valid JSON object with ALL fields. Use null for unknown values.
-Add a confidence score (0-1) based on how clear the information was.
+CRITICAL RULES:
+1. If the message does NOT contain information about a completed excursion/tour (e.g., greetings, general chat, questions), return an empty list with confidence 0.0
+2. If the message describes ONE excursion, return a list with one object
+3. If the message describes MULTIPLE separate excursions (e.g., "Monday I had X, Tuesday I had Y"), return a list with multiple objects
+4. Only extract data if the message is clearly about a tour/excursion that was completed
+5. For each excursion, extract:
+   - number_of_tourists: integer
+   - average_age: float
+   - age_distribution: float (0-20, standard deviation of ages)
+   - vivacity_before: float (0-1, energy level before tour)
+   - vivacity_after: float (0-1, energy level after tour)
+   - interest_in_it: float (0-1, interest in IT topics)
+   - interests_list: space-separated keywords of what tourists were interested in
+   - confidence: float (0-1, how confident you are about the extraction). Set to 0.0 if the message is not about excursions.
+
+Return ONLY a valid JSON array of excursion objects. Use null for unknown fields.
 
 Message: "{message}"
 
-JSON response:"""
+JSON response (array of objects, can be empty if not about excursions):"""
 
         try:
             response = await self.client.chat.completions.create(
                 model=settings.MISTRAL_MODEL,
                 messages=[
-                    {"role": "system", "content": "You extract structured data from text. Always return valid JSON."},
+                    {"role": "system", "content": "You extract structured excursion data from text. Return ONLY a valid JSON array of excursion objects, or an empty array [] if the message is not about excursions."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                max_tokens=500,
+                max_tokens=1500,
             )
 
             content = response.choices[0].message.content.strip()
             
             # Extract JSON from response (handle markdown code blocks)
-            json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', content, re.DOTALL)
+            json_match = re.search(r'```(?:json)?\s*(\[.*?\])\s*```', content, re.DOTALL)
             if json_match:
                 content = json_match.group(1)
             
-            data = json.loads(content)
+            raw_data = json.loads(content)
             
-            # Apply defaults for missing values
-            return AIExcursionExtraction(
-                number_of_tourists=data.get("number_of_tourists", 10),
-                average_age=data.get("average_age", 25.0),
-                age_distribution=data.get("age_distribution", 5.0),
-                vivacity_before=data.get("vivacity_before", 0.5),
-                vivacity_after=data.get("vivacity_after", 0.5),
-                interest_in_it=data.get("interest_in_it", 0.5),
-                interests_list=data.get("interests_list", "general tourism"),
-                confidence=data.get("confidence", 0.7),
-                raw_message=message,
-            )
+            # Ensure it's a list
+            if not isinstance(raw_data, list):
+                raw_data = [raw_data]
+            
+            # Parse each excursion and filter by confidence
+            excursions = []
+            for item in raw_data:
+                extraction = AIExcursionExtraction(
+                    number_of_tourists=item.get("number_of_tourists"),
+                    average_age=item.get("average_age"),
+                    age_distribution=item.get("age_distribution"),
+                    vivacity_before=item.get("vivacity_before"),
+                    vivacity_after=item.get("vivacity_after"),
+                    interest_in_it=item.get("interest_in_it"),
+                    interests_list=item.get("interests_list"),
+                    confidence=item.get("confidence", 0.0),
+                    raw_message=message,
+                )
+                # Only keep excursions with sufficient confidence
+                if extraction.confidence >= CONFIDENCE_THRESHOLD:
+                    excursions.append(extraction)
+            
+            return ExcursionBatch(excursions=excursions, raw_message=message)
 
         except Exception as e:
             error_msg = str(e)
             if "401" in error_msg or "invalid_api_key" in error_msg or "Incorrect API key" in error_msg:
-                return AIExcursionExtraction(
-                    number_of_tourists=10,
-                    average_age=25.0,
-                    age_distribution=5.0,
-                    vivacity_before=0.5,
-                    vivacity_after=0.5,
-                    interest_in_it=0.5,
-                    interests_list="general tourism",
-                    confidence=0.0,
-                    raw_message=message,
-                )
-            # Return default values on error
-            return AIExcursionExtraction(
-                number_of_tourists=10,
-                average_age=25.0,
-                age_distribution=5.0,
-                vivacity_before=0.5,
-                vivacity_after=0.5,
-                interest_in_it=0.5,
-                interests_list="general tourism",
-                confidence=0.0,
-                raw_message=message,
-            )
+                return ExcursionBatch(excursions=[], raw_message=message)
+            # Return empty on error
+            return ExcursionBatch(excursions=[], raw_message=message)
 
     async def analyze_statistics(self, query: str, context: str) -> str:
         """Answer natural language questions about excursion statistics"""
