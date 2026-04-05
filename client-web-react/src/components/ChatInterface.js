@@ -12,7 +12,10 @@ function ChatInterface({ user }) {
     const saved = localStorage.getItem(`tourstats_chat_${user?.id}`);
     return saved ? JSON.parse(saved) : [];
   });
-  const [inputMessage, setInputMessage] = useState('');
+  const [inputMessage, setInputMessage] = useState(() => {
+    // Restore draft text from localStorage
+    return localStorage.getItem(`tourstats_draft_${user?.id}`) || '';
+  });
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wsRef = useRef(null);
@@ -24,6 +27,13 @@ function ChatInterface({ user }) {
       localStorage.setItem(`tourstats_chat_${user.id}`, JSON.stringify(messages));
     }
   }, [messages, user]);
+
+  // Save draft text to localStorage whenever input changes
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`tourstats_draft_${user.id}`, inputMessage);
+    }
+  }, [inputMessage, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -96,26 +106,12 @@ function ChatInterface({ user }) {
     setMessages(prev => [...prev, { type: 'user', message: inputMessage }]);
     setIsLoading(true);
 
-    // Send via WebSocket
+    // Send via WebSocket - nanobot will handle AI response AND saving to database
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'chat',
         message: inputMessage
       }));
-    }
-
-    // Also store excursion via backend
-    try {
-      await fetch(`${API_URL}/api/excursions/from-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.id,
-          message: inputMessage
-        })
-      });
-    } catch (error) {
-      console.error('Error storing excursion:', error);
     }
 
     setInputMessage('');
