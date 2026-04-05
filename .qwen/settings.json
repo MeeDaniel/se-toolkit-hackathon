@@ -18,7 +18,9 @@
       "Bash(docker cp *)",
       "Bash(move *)",
       "Bash(mkdir *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(docker system *)",
+      "Bash(curl *)"
     ]
   },
   "$version": 3

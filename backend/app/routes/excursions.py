@@ -6,7 +6,7 @@ from typing import List
 from app.database import get_db
 from app.models import Excursion
 from app.schemas import ExcursionCreate, ExcursionResponse, ExcursionFromMessage
-from app.services import ai_service
+from app.services.ai_service import ai_service
 
 router = APIRouter()
 
