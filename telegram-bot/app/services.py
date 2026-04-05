@@ -9,9 +9,12 @@ class BackendService:
         self.backend_url = settings.BACKEND_URL.rstrip('/')
     
     async def get_or_create_user(self, telegram_id: int, telegram_username: str) -> dict:
-        """Get or create a user based on Telegram ID"""
-        # Use telegram_id as a unique identifier - map to telegram_alias
-        telegram_alias = f"tg_{telegram_id}"
+        """Get or create a user based on Telegram username (matches web app)"""
+        # Use the actual Telegram username to match web app registration
+        # If username is None, fallback to tg_{id}
+        telegram_alias = telegram_username if telegram_username else f"tg_{telegram_id}"
+        # Remove @ prefix if present
+        telegram_alias = telegram_alias.lstrip('@')
         
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
