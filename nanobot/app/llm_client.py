@@ -20,8 +20,18 @@ class LLMClient:
     ) -> str:
         """Get response from LLM"""
         try:
+            # Add Telegram formatting instructions
+            telegram_format_prompt = """\n\nIMPORTANT FORMATTING RULES:
+- Use **bold** for emphasis (not # headers)
+- Use *italic* for secondary emphasis  
+- Use bullet points with - or * for lists
+- Use numbered lists with 1. 2. 3.
+- DO NOT use # headers, they don't work in Telegram
+- Keep responses concise and well-formatted
+- Use emojis sparingly but appropriately"""
+
             messages = [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": system_prompt + telegram_format_prompt},
                 *conversation_history,
                 {"role": "user", "content": message}
             ]

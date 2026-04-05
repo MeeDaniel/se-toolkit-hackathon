@@ -192,3 +192,64 @@
   background: #f3f4f6;
   border-color: #667eea;
 }
+
+.welcome-message {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.welcome-message h3 {
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.welcome-message p {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+/* Markdown styling in bot messages */
+.message-bubble {
+  line-height: 1.6;
+}
+
+.message-bubble h1, .message-bubble h2, .message-bubble h3 {
+  margin: 0.75rem 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.message-bubble h1 { font-size: 1.3rem; }
+.message-bubble h2 { font-size: 1.2rem; }
+
+.message-bubble p {
+  margin: 0.5rem 0;
+}
+
+.message-bubble ul, .message-bubble ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.message-bubble li {
+  margin: 0.25rem 0;
+}
+
+.message-bubble strong {
+  font-weight: 600;
+}
+
+.message-bubble code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.message-bubble blockquote {
+  border-left: 3px solid #667eea;
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: #6b7280;
+}

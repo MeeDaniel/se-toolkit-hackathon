@@ -1,29 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import './StatisticsDashboard.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4ade80', '#fbbf24', '#f87171'];
 
-function StatisticsDashboard() {
+function StatisticsDashboard({ user }) {
   const [statistics, setStatistics] = useState(null);
   const [correlations, setCorrelations] = useState(null);
   const [excursions, setExcursions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user && user.id) {
+      fetchData(user.id);
+    }
+  }, [user]);
 
-  const fetchData = async () => {
+  const fetchData = async (userId) => {
     try {
       setLoading(true);
       const [statsRes, corrRes, excRes] = await Promise.all([
-        axios.get(`${API_URL}/api/statistics/`),
-        axios.get(`${API_URL}/api/statistics/correlations`),
-        axios.get(`${API_URL}/api/excursions/?limit=10`),
+        axios.get(`${API_URL}/api/statistics/?user_id=${userId}`),
+        axios.get(`${API_URL}/api/statistics/correlations?user_id=${userId}`),
+        axios.get(`${API_URL}/api/excursions/?user_id=${userId}&limit=10`),
       ]);
 
       setStatistics(statsRes.data);

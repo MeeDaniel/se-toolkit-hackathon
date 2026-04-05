@@ -14,16 +14,19 @@ async def create_or_get_user(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new user or return existing one"""
+    """Create a new user or return existing one (case-insensitive)"""
+    # Normalize to lowercase for case-insensitive matching
+    normalized_alias = user_data.telegram_alias.lower()
+    
     result = await db.execute(
-        select(User).where(User.telegram_alias == user_data.telegram_alias)
+        select(User).where(User.telegram_alias == normalized_alias)
     )
     existing_user = result.scalar_one_or_none()
     
     if existing_user:
         return existing_user
     
-    db_user = User(telegram_alias=user_data.telegram_alias)
+    db_user = User(telegram_alias=normalized_alias)
     db.add(db_user)
     await db.flush()
     await db.refresh(db_user)

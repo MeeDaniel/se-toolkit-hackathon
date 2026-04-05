@@ -1,16 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './ChatInterface.css';
 
 const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:8001/ws';
 const ACCESS_KEY = process.env.REACT_APP_NANOBOT_ACCESS_KEY || 'changeme_nanobot_key_123';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-function ChatInterface() {
-  const [messages, setMessages] = useState([]);
+function ChatInterface({ user }) {
+  const [messages, setMessages] = useState(() => {
+    // Load from localStorage on mount
+    const saved = localStorage.getItem(`tourstats_chat_${user?.id}`);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [inputMessage, setInputMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wsRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`tourstats_chat_${user.id}`, JSON.stringify(messages));
+    }
+  }, [messages, user]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     connectWebSocket();
@@ -21,10 +38,6 @@ function ChatInterface() {
     };
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const connectWebSocket = () => {
     const wsUrlWithKey = `${WS_URL}?access_key=${ACCESS_KEY}`;
     const ws = new WebSocket(wsUrlWithKey);
@@ -32,7 +45,6 @@ function ChatInterface() {
     ws.onopen = () => {
       console.log('WebSocket connected');
       setIsConnected(true);
-      ws.setRequestHeader('X-Access-Key', ACCESS_KEY);
     };
 
     ws.onmessage = (event) => {
@@ -40,10 +52,18 @@ function ChatInterface() {
       console.log('Received:', data);
       
       if (data.type === 'welcome') {
-        setMessages([{ type: 'system', message: data.message }]);
+        // Don't add to messages, just log
       } else if (data.type === 'chat_response') {
         setMessages(prev => [...prev, { type: 'bot', message: data.message }]);
         setIsLoading(false);
+        
+        // If excursion was stored, create a system message
+        if (data.excursion_stored) {
+          setMessages(prev => [...prev, { 
+            type: 'system', 
+            message: '✅ Excursion data saved to your statistics!' 
+          }]);
+        }
       } else if (data.type === 'error') {
         setMessages(prev => [...prev, { type: 'error', message: data.message }]);
         setIsLoading(false);
@@ -53,6 +73,8 @@ function ChatInterface() {
     ws.onclose = () => {
       console.log('WebSocket disconnected');
       setIsConnected(false);
+      // Try to reconnect after 3 seconds
+      setTimeout(connectWebSocket, 3000);
     };
 
     ws.onerror = (error) => {
@@ -82,6 +104,20 @@ function ChatInterface() {
       }));
     }
 
+    // Also store excursion via backend
+    try {
+      await fetch(`${API_URL}/api/excursions/from-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          message: inputMessage
+        })
+      });
+    } catch (error) {
+      console.error('Error storing excursion:', error);
+    }
+
     setInputMessage('');
   };
 
@@ -104,10 +140,22 @@ function ChatInterface() {
       </div>
 
       <div className="chat-messages">
+        {messages.length === 0 && (
+          <div className="welcome-message">
+            <h3>👋 Welcome to TourStats!</h3>
+            <p>Describe your completed excursion and I'll extract statistics automatically.</p>
+            <p><strong>Example:</strong> "Just finished a tour with 15 people, mostly young adults around 25. They were really energetic and interested in robotics and AI."</p>
+          </div>
+        )}
+        
         {messages.map((msg, idx) => (
           <div key={idx} className={`message message-${msg.type}`}>
             <div className="message-bubble">
-              {msg.message}
+              {msg.type === 'bot' ? (
+                <ReactMarkdown>{msg.message}</ReactMarkdown>
+              ) : (
+                msg.message
+              )}
             </div>
           </div>
         ))}
