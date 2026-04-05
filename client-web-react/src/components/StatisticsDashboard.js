@@ -123,6 +123,11 @@ function StatisticsDashboard({ user, refreshTrigger }) {
     { name: 'After', value: statistics.avg_vivacity_after },
   ];
 
+  // Extract summary data from correlations if available
+  const corrSummary = correlations?.summary;
+  const topCorrelations = correlations?.summary?.most_interesting_correlations || [];
+  const allCorrelations = correlations?.all_correlations || [];
+
   return (
     <div className="statistics-dashboard">
       <div className="dashboard-header">
@@ -184,30 +189,75 @@ function StatisticsDashboard({ user, refreshTrigger }) {
         </div>
       </div>
 
-      {correlations && correlations.correlations && (
+      {corrSummary && (
         <div className="correlations-section">
-          <h3>Correlation Analysis</h3>
-          <div className="correlation-cards">
-            {Object.entries(correlations.correlations).map(([key, value]) => (
-              <div key={key} className="correlation-card">
-                <div className="correlation-header">
-                  <h4>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
-                  <div className={`correlation-value ${Math.abs(value) > 0.4 ? 'strong' : 'weak'}`}>
-                    {value.toFixed(2)}
-                  </div>
-                </div>
-                <p className="correlation-insight">
-                  {Math.abs(value) > 0.7 ? 'Strong' : Math.abs(value) > 0.4 ? 'Moderate' : 'Weak'}{' '}
-                  {value > 0 ? 'positive' : 'negative'} correlation
-                </p>
-              </div>
-            ))}
-          </div>
-          {correlations.insights && (
-            <div className="insights-box">
-              <h4>Insights</h4>
-              <p>{correlations.insights}</p>
+          <h3>📊 Key Insights</h3>
+          
+          {/* Summary cards */}
+          <div className="insights-summary">
+            <div className="insight-card">
+              <div className="insight-icon">👥</div>
+              <div className="insight-value">{corrSummary.avg_group_size}</div>
+              <div className="insight-label">Avg Tourists/Tour</div>
             </div>
+            <div className="insight-card">
+              <div className="insight-icon">{corrSummary.avg_vivacity_boost > 0.1 ? '🔥' : '📊'}</div>
+              <div className="insight-value">+{(corrSummary.avg_vivacity_boost * 100).toFixed(0)}%</div>
+              <div className="insight-label">Avg Energy Boost</div>
+            </div>
+            {corrSummary.best_excursion && (
+              <div className="insight-card">
+                <div className="insight-icon">🏆</div>
+                <div className="insight-value">#{corrSummary.best_excursion.id}</div>
+                <div className="insight-label">Best Tour (+{(corrSummary.best_excursion.vivacity_boost * 100).toFixed(0)}%)</div>
+              </div>
+            )}
+          </div>
+
+          {/* Top correlations */}
+          <div className="top-correlations">
+            <h4>🔍 Top Correlations Found</h4>
+            {topCorrelations.length > 0 ? (
+              <div className="correlation-list">
+                {topCorrelations.map((corr, idx) => (
+                  <div key={corr.id} className={`correlation-item ${corr.type}`}>
+                    <div className="correlation-item-header">
+                      <span className="correlation-rank">#{idx + 1}</span>
+                      <span className={`correlation-strength ${corr.strength}`}>
+                        {corr.strength} {corr.direction}
+                      </span>
+                    </div>
+                    <div className="correlation-item-label">{corr.label}</div>
+                    <div className="correlation-item-value">
+                      {corr.type === 'correlation' ? `r = ${corr.value.toFixed(2)}` : corr.formatted_value}
+                    </div>
+                    <div className="correlation-item-interpretation">{corr.interpretation}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-correlations">Add more excursions (at least 3) to see meaningful correlations.</p>
+            )}
+          </div>
+
+          {/* All correlations toggle */}
+          {allCorrelations.length > 5 && (
+            <details className="all-correlations">
+              <summary>📈 View All {allCorrelations.length} Correlations</summary>
+              <div className="correlation-list">
+                {allCorrelations.map((corr) => (
+                  <div key={corr.id} className={`correlation-item ${corr.type}`}>
+                    <div className="correlation-item-header">
+                      <span className="correlation-label">{corr.label}</span>
+                      <span className={`correlation-strength ${corr.strength || 'average'}`}>
+                        {corr.type === 'correlation' ? `r = ${corr.value.toFixed(2)}` : corr.formatted_value}
+                      </span>
+                    </div>
+                    <div className="correlation-item-interpretation">{corr.interpretation}</div>
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
         </div>
       )}
