@@ -1,39 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import './ChatInterface.css';
 
 const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:8001/ws';
 const ACCESS_KEY = process.env.REACT_APP_NANOBOT_ACCESS_KEY || 'changeme_nanobot_key_123';
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 function ChatInterface({ user }) {
-  const [messages, setMessages] = useState(() => {
-    // Load from localStorage on mount
-    const saved = localStorage.getItem(`tourstats_chat_${user?.id}`);
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [inputMessage, setInputMessage] = useState(() => {
-    // Restore draft text from localStorage
-    return localStorage.getItem(`tourstats_draft_${user?.id}`) || '';
-  });
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wsRef = useRef(null);
   const messagesEndRef = useRef(null);
-
-  // Save messages to localStorage whenever they change
-  useEffect(() => {
-    if (user?.id) {
-      localStorage.setItem(`tourstats_chat_${user.id}`, JSON.stringify(messages));
-    }
-  }, [messages, user]);
-
-  // Save draft text to localStorage whenever input changes
-  useEffect(() => {
-    if (user?.id) {
-      localStorage.setItem(`tourstats_draft_${user.id}`, inputMessage);
-    }
-  }, [inputMessage, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -106,7 +84,7 @@ function ChatInterface({ user }) {
     setMessages(prev => [...prev, { type: 'user', message: inputMessage }]);
     setIsLoading(true);
 
-    // Send via WebSocket - nanobot will handle AI response AND saving to database
+    // Send via WebSocket
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'chat',

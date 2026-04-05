@@ -92,6 +92,20 @@
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
+}
+
+/* Page containers - both exist, only visibility changes */
+.page-container {
+  width: 100%;
+}
+
+.page-visible {
+  display: block;
+}
+
+.page-hidden {
+  display: none;
 }
 
 @media (max-width: 768px) {

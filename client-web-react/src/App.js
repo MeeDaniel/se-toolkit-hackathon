@@ -8,18 +8,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('chat');
 
-  // Load user from localStorage on mount
-  useEffect(() => {
-    const savedUser = localStorage.getItem('tourstats_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
-
   const handleLogin = (telegramAlias) => {
     const userData = { telegram_alias: telegramAlias, id: null };
     setUser(userData);
-    localStorage.setItem('tourstats_user', JSON.stringify(userData));
     
     // Register user with backend
     registerUser(telegramAlias);
@@ -37,7 +28,6 @@ function App() {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        localStorage.setItem('tourstats_user', JSON.stringify(userData));
       }
     } catch (error) {
       console.error('Error registering user:', error);
@@ -46,7 +36,7 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('tourstats_user');
+    setActiveTab('chat');
   };
 
   if (!user) {
@@ -84,8 +74,13 @@ function App() {
       </nav>
 
       <main className="app-main">
-        {activeTab === 'chat' && <ChatInterface user={user} />}
-        {activeTab === 'statistics' && <StatisticsDashboard user={user} />}
+        {/* Both pages exist simultaneously, only visibility changes */}
+        <div className={`page-container ${activeTab === 'chat' ? 'page-visible' : 'page-hidden'}`}>
+          <ChatInterface user={user} />
+        </div>
+        <div className={`page-container ${activeTab === 'statistics' ? 'page-visible' : 'page-hidden'}`}>
+          <StatisticsDashboard user={user} />
+        </div>
       </main>
     </div>
   );
