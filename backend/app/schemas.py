@@ -29,6 +29,16 @@ class ExcursionCreate(BaseModel):
     raw_message: Optional[str] = Field(None, description="Original message")
 
 
+class ExcursionUpdate(BaseModel):
+    number_of_tourists: Optional[int] = Field(None, gt=0)
+    average_age: Optional[float] = Field(None, gt=0)
+    age_distribution: Optional[float] = None
+    vivacity_before: Optional[float] = Field(None, ge=0, le=1)
+    vivacity_after: Optional[float] = Field(None, ge=0, le=1)
+    interest_in_it: Optional[float] = Field(None, ge=0, le=1)
+    interests_list: Optional[str] = None
+
+
 class ExcursionResponse(BaseModel):
     id: int
     user_id: int

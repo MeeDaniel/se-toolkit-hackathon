@@ -5,7 +5,7 @@ from typing import List
 
 from app.database import get_db
 from app.models import Excursion
-from app.schemas import ExcursionCreate, ExcursionResponse, ExcursionFromMessage, ExcursionResponseWithAI
+from app.schemas import ExcursionCreate, ExcursionResponse, ExcursionFromMessage, ExcursionResponseWithAI, ExcursionUpdate
 from app.services.ai_service import ai_service
 
 router = APIRouter()
@@ -100,6 +100,36 @@ async def create_excursion_from_message(
         ai_response=ai_response,
         excursion_stored=len(created) > 0
     )
+
+
+@router.put("/{excursion_id}", response_model=ExcursionResponse)
+async def update_excursion(
+    excursion_id: int,
+    user_id: int,
+    update_data: ExcursionUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an excursion's data"""
+    result = await db.execute(
+        select(Excursion).where(
+            Excursion.id == excursion_id,
+            Excursion.user_id == user_id
+        )
+    )
+    excursion = result.scalar_one_or_none()
+    
+    if not excursion:
+        raise HTTPException(status_code=404, detail="Excursion not found")
+    
+    # Update only provided fields
+    update_dict = update_data.model_dump(exclude_unset=True)
+    for field, value in update_dict.items():
+        setattr(excursion, field, value)
+    
+    await db.flush()
+    await db.refresh(excursion)
+    
+    return excursion
 
 
 @router.delete("/{excursion_id}")

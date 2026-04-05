@@ -14,6 +14,8 @@ function StatisticsDashboard({ user, refreshTrigger }) {
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [editingExcursion, setEditingExcursion] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   useEffect(() => {
     if (user && user.id && refreshTrigger) {
@@ -61,6 +63,40 @@ function StatisticsDashboard({ user, refreshTrigger }) {
     setOffset(newOffset);
     if (user && user.id) {
       fetchData(user.id, newOffset, true);
+    }
+  };
+
+  const openEditModal = (excursion) => {
+    setEditingExcursion(excursion);
+    setEditForm({
+      number_of_tourists: excursion.number_of_tourists,
+      average_age: excursion.average_age,
+      age_distribution: excursion.age_distribution,
+      vivacity_before: excursion.vivacity_before,
+      vivacity_after: excursion.vivacity_after,
+      interest_in_it: excursion.interest_in_it,
+      interests_list: excursion.interests_list
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingExcursion(null);
+    setEditForm({});
+  };
+
+  const saveEdit = async () => {
+    try {
+      await axios.put(
+        `${API_URL}/api/excursions/${editingExcursion.id}`,
+        editForm,
+        { params: { user_id: user.id } }
+      );
+      // Refresh data after save
+      fetchData(user.id, 0);
+      closeEditModal();
+    } catch (error) {
+      console.error('Error saving excursion:', error);
+      alert('Failed to save changes');
     }
   };
 
@@ -192,6 +228,7 @@ function StatisticsDashboard({ user, refreshTrigger }) {
                   <th>Vivacity After</th>
                   <th>IT Interest</th>
                   <th>Interests</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,6 +241,9 @@ function StatisticsDashboard({ user, refreshTrigger }) {
                     <td>{(exc.vivacity_after * 100).toFixed(0)}%</td>
                     <td>{(exc.interest_in_it * 100).toFixed(0)}%</td>
                     <td className="interests-cell">{exc.interests_list}</td>
+                    <td>
+                      <button className="edit-btn" onClick={() => openEditModal(exc)}>✏️ Edit</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -218,6 +258,81 @@ function StatisticsDashboard({ user, refreshTrigger }) {
           </>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingExcursion && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>✏️ Edit Excursion #{editingExcursion.id}</h3>
+              <button className="close-btn" onClick={closeEditModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Number of Tourists</label>
+                  <input
+                    type="number"
+                    value={editForm.number_of_tourists || ''}
+                    onChange={e => setEditForm({...editForm, number_of_tourists: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Average Age</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editForm.average_age || ''}
+                    onChange={e => setEditForm({...editForm, average_age: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Vivacity Before (0-100%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={(editForm.vivacity_before || 0) * 100}
+                    onChange={e => setEditForm({...editForm, vivacity_before: parseFloat(e.target.value) / 100})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Vivacity After (0-100%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={(editForm.vivacity_after || 0) * 100}
+                    onChange={e => setEditForm({...editForm, vivacity_after: parseFloat(e.target.value) / 100})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>IT Interest (0-100%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={(editForm.interest_in_it || 0) * 100}
+                    onChange={e => setEditForm({...editForm, interest_in_it: parseFloat(e.target.value) / 100})}
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <label>Interests (space-separated keywords)</label>
+                  <input
+                    type="text"
+                    value={editForm.interests_list || ''}
+                    onChange={e => setEditForm({...editForm, interests_list: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={closeEditModal}>Cancel</button>
+              <button className="save-btn" onClick={saveEdit}>💾 Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
