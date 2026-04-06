@@ -9,16 +9,16 @@ class BackendService:
         self.backend_url = settings.BACKEND_URL.rstrip('/')
     
     async def get_or_create_user(self, telegram_id: int, telegram_username: str) -> dict:
-        """Get or create a user based on Telegram username (matches web app)"""
-        # Use the actual Telegram username to match web app registration
-        # If username is None, fallback to tg_{id}
-        telegram_alias = telegram_username if telegram_username else f"tg_{telegram_id}"
-        # Remove @ prefix if present
-        telegram_alias = telegram_alias.lstrip('@')
+        """Get or create a user based on Telegram username (via Telegram bot endpoint)
         
+        This registers the user with requires_password=True, meaning they MUST set a password.
+        """
+        telegram_alias = telegram_username if telegram_username else f"tg_{telegram_id}"
+        telegram_alias = telegram_alias.lstrip('@')
+
         async with httpx.AsyncClient(timeout=10.0) as client:
+            # Try to get existing user first
             try:
-                # Try to get existing user
                 response = await client.get(
                     f"{self.backend_url}/api/users/{telegram_alias}"
                 )
@@ -26,15 +26,15 @@ class BackendService:
                     return response.json()
             except Exception:
                 pass
-            
-            # Create new user
+
+            # Register user via Telegram endpoint (requires_password=True)
             response = await client.post(
-                f"{self.backend_url}/api/users/",
+                f"{self.backend_url}/api/users/register-telegram",
                 json={"telegram_alias": telegram_alias}
             )
             if response.status_code == 200:
                 return response.json()
-            
+
             raise Exception(f"Failed to create user: {response.text}")
     
     async def send_message_to_backend(self, user_id: int, message: str) -> dict:

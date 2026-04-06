@@ -3,34 +3,23 @@ from typing import Optional
 from datetime import datetime
 
 
-class UserCreate(BaseModel):
-    telegram_alias: str = Field(..., min_length=3, max_length=100, description="Telegram username/alias")
+class UserRegister(BaseModel):
+    login: str = Field(..., min_length=3, max_length=100, description="Username/login")
+    password: str = Field(..., min_length=4, description="Password")
+
+
+class UserLogin(BaseModel):
+    login: str
+    password: str
 
 
 class UserResponse(BaseModel):
     id: int
-    telegram_alias: str
-    excursions: int
-    password_protected: bool  # True if password is set
+    login: str
     created_at: datetime
 
     class Config:
         from_attributes = True
-
-
-class UserLogin(BaseModel):
-    telegram_alias: str
-    password: Optional[str] = None  # Required if user has password set
-
-
-class UserSetPassword(BaseModel):
-    telegram_alias: str
-    password: str = Field(..., min_length=4, description="New password")
-
-
-class UserChangePassword(BaseModel):
-    telegram_alias: str
-    new_password: str = Field(..., min_length=4, description="New password")
 
 
 class ExcursionCreate(BaseModel):

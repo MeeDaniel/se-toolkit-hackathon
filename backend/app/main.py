@@ -12,30 +12,47 @@ async def lifespan(app: FastAPI):
     # Startup: Create database tables and handle schema migrations
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Add user_id column if it doesn't exist (migration)
+        
+        # Migration: Rename telegram_alias to login if needed
         try:
             await conn.execute("""
-                DO $$ 
+                DO $$
                 BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns 
-                        WHERE table_name = 'excursions' AND column_name = 'user_id'
+                    -- Check if old column exists
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'users' AND column_name = 'telegram_alias'
                     ) THEN
-                        ALTER TABLE excursions ADD COLUMN user_id INTEGER REFERENCES users(id);
-                        -- Set default user_id for existing records
-                        UPDATE excursions SET user_id = 1 WHERE user_id IS NULL;
+                        -- Rename column
+                        ALTER TABLE users RENAME COLUMN telegram_alias TO login;
+                        
+                        -- Remove requires_password if exists
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'users' AND column_name = 'requires_password'
+                        ) THEN
+                            ALTER TABLE users DROP COLUMN requires_password;
+                        END IF;
+                        
+                        -- Make password_hash NOT NULL (set default for any NULL)
+                        UPDATE users SET password_hash = '' WHERE password_hash IS NULL;
+                        ALTER TABLE users ALTER COLUMN password_hash SET NOT NULL;
                     END IF;
                     
+                    -- Add password_hash column if it doesn't exist
                     IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.tables 
-                        WHERE table_name = 'users'
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'users' AND column_name = 'password_hash'
                     ) THEN
-                        CREATE TABLE users (
-                            id SERIAL PRIMARY KEY,
-                            telegram_alias VARCHAR(100) UNIQUE NOT NULL,
-                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                            excursions INTEGER DEFAULT 0
-                        );
+                        ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '';
+                    END IF;
+                    
+                    -- Add login column if it doesn't exist
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'users' AND column_name = 'login'
+                    ) THEN
+                        ALTER TABLE users ADD COLUMN login VARCHAR(100) UNIQUE NOT NULL DEFAULT '';
                     END IF;
                 END $$;
             """)

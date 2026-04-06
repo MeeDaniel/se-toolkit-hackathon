@@ -7,13 +7,13 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    telegram_alias = Column(String(100), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=True)  # NULL = no password set (web-only)
+    login = Column(String(100), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)  # Password is REQUIRED
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     excursions = Column(Integer, default=0)
 
     def __repr__(self):
-        return f"<User(id={self.id}, telegram=@{self.telegram_alias}, password_set={self.password_hash is not None})>"
+        return f"<User(id={self.id}, login={self.login})>"
 
 
 class Excursion(Base):

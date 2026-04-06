@@ -280,53 +280,65 @@ se-toolkit-lab-9/
 
 6. **API Key Security:** The MISTRAL_API_KEY is stored in .env file which is in .gitignore. Never commit it.
 
-## Current Status: ✅ OPERATIONAL
+## Current Status: ✅ OPERATIONAL (WEB-ONLY)
 
-The password security feature is **NOW WORKING**. All issues have been resolved:
+**Major Pivot (April 6, 2026):** Removed Telegram bot entirely, implemented standalone web authentication.
 
-### Issues Fixed (April 6, 2026)
+### Architecture Change
 
-1. **✅ Caddyfile Configuration Error:**
-   - **Problem:** Caddyfile used invalid JSON-style syntax with `${CADDY_DOMAIN:-localhost}` 
-   - **Solution:** Replaced with proper Caddy syntax: `localhost { ... }`
-   - **File:** `caddy/Caddyfile`
+**Before:** Telegram bot + Web app with mirrored data  
+**After:** Web-only application with independent registration/login
 
-2. **✅ Backend passlib Dependency:**
-   - **Problem:** `passlib[bcrypt]` was in `pyproject.toml` but not in Dockerfile
-   - **Solution:** Added `passlib[bcrypt]` to `backend/Dockerfile` pip install command
-   - **File:** `backend/Dockerfile`
+### Changes Made
 
-3. **✅ bcrypt Version Compatibility:**
-   - **Problem:** passlib 1.7.4 is incompatible with bcrypt 5.0.0 (missing `__about__` attribute)
-   - **Solution:** Pinned bcrypt to version 4.0.1 which is compatible with passlib
-   - **File:** `backend/Dockerfile` (added `"bcrypt==4.0.1"`)
+1. **✅ Removed Telegram Bot:**
+   - Deleted telegram-bot service from docker-compose.yml
+   - Removed all Telegram-related authentication logic
+   - Cleaned up orphan containers
 
-4. **✅ Environment Variable Naming:**
-   - **Problem:** `.env` file had `QWEN_BASE_URL` and `QWEN_MODEL` instead of `MISTRAL_*`
-   - **Solution:** Renamed to `MISTRAL_BASE_URL` and `MISTRAL_MODEL`
-   - **File:** `.env`
+2. **✅ Implemented Standalone Authentication:**
+   - Renamed `telegram_alias` → `login` across entire codebase
+   - Made password REQUIRED for all users (no exceptions)
+   - Created dedicated Registration and Login pages
+   - Session persistence via localStorage
 
-### Verified Working Features
+3. **✅ Backend Updates:**
+   - New endpoints: `POST /api/users/register`, `POST /api/users/login`
+   - Removed: Telegram-specific password management endpoints
+   - Database migration: Renamed column, enforced password requirement
+   - Password hashing: bcrypt via passlib
 
-- ✅ Backend API running on http://localhost:8000
-- ✅ Password hashing with bcrypt working correctly
-- ✅ User registration without password (web-only)
-- ✅ Password setting via API
-- ✅ Password verification on login
-- ✅ Wrong password rejection
-- ✅ Telegram bot running (@setoolkitdchernykhhackathonbot)
-- ✅ Web frontend accessible on http://localhost:3000
-- ✅ Web login with password protection
-- ✅ All Docker services healthy and running
+4. **✅ Frontend Updates:**
+   - New `Auth.js` component with login/registration toggle
+   - Form validation (login ≥3 chars, password ≥4 chars, confirm password match)
+   - Session management with localStorage
+   - Clean logout functionality
 
-### Services Status
+### Security Model
 
-| Service | Status | Port |
-|---------|--------|------|
-| PostgreSQL | ✅ Healthy | 5432 |
-| Backend (FastAPI) | ✅ Running | 8000 |
-| Nanobot AI | ✅ Running | 8001 |
-| Web Client (React) | ✅ Running | 3000 |
-| Caddy Proxy | ✅ Running | 80, 443 |
-| Telegram Bot | ✅ Running | - |
-| OpenTelemetry | ✅ Running | 4317-4318 |
+**Registration Flow:**
+1. User visits web app → sees Registration/Login page
+2. New users click "Register" link
+3. Enter login (≥3 chars) and password (≥4 chars, confirmed)
+4. Backend validates, hashes password with bcrypt, creates account
+5. User auto-logged in and redirected to main app
+
+**Login Flow:**
+1. Returning user enters login and password
+2. Backend verifies password against stored hash
+3. On success: returns user data, frontend stores in localStorage
+4. On failure: shows "Invalid login or password" (generic for security)
+
+**Session Management:**
+- Login persists via localStorage
+- Logout clears session
+- No cookies/tokens yet (sufficient for MVP)
+
+### Verified Working
+
+- ✅ Registration: `testuser2` created successfully
+- ✅ Login: `meedaniel` logs in with password
+- ✅ Wrong password rejection: Returns 401
+- ✅ Duplicate login prevention: Returns 409
+- ✅ Web frontend: Accessible at http://localhost:3000
+- ✅ All services running and healthy

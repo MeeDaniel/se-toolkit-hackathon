@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import TelegramLogin from './components/TelegramLogin';
+import Auth from './components/Auth';
 import ChatInterface from './components/ChatInterface';
 import StatisticsDashboard from './components/StatisticsDashboard';
 
@@ -8,39 +8,31 @@ function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('chat');
 
-  const handleLogin = (telegramAlias) => {
-    const userData = { telegram_alias: telegramAlias, id: null };
+  const handleLogin = (userData) => {
     setUser(userData);
-    
-    // Register user with backend
-    registerUser(telegramAlias);
-  };
-
-  const registerUser = async (telegramAlias) => {
-    try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/users/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telegram_alias: telegramAlias })
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      }
-    } catch (error) {
-      console.error('Error registering user:', error);
-    }
+    localStorage.setItem('tourstats_user', JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     setUser(null);
     setActiveTab('chat');
+    localStorage.removeItem('tourstats_user');
   };
 
+  // Check for saved session on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('tourstats_user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem('tourstats_user');
+      }
+    }
+  }, []);
+
   if (!user) {
-    return <TelegramLogin onLogin={handleLogin} />;
+    return <Auth onLogin={handleLogin} />;
   }
 
   return (
@@ -52,7 +44,7 @@ function App() {
             <p className="subtitle">AI-Powered Analytics for Tour Guides</p>
           </div>
           <div className="user-info">
-            <span className="user-badge">👤 @{user.telegram_alias}</span>
+            <span className="user-badge">👤 {user.login}</span>
             <button className="logout-btn" onClick={handleLogout}>Logout</button>
           </div>
         </div>

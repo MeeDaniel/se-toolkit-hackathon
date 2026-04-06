@@ -45,45 +45,76 @@ async def ensure_user_registered(user_id: int, username: str = None) -> dict:
     return cache["backend_user"]
 
 
+def is_password_required(user: dict) -> bool:
+    """Check if user requires password to use the bot"""
+    return user.get("requires_password", False)
+
+
+def is_password_set(user: dict) -> bool:
+    """Check if user has set their password"""
+    return user.get("password_protected", False)
+
+
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
     """Handle /start command"""
     user = await ensure_user_registered(message.from_user.id, message.from_user.username)
-    
-    # Check if user has password set
-    if not user.get("password_protected"):
-        # First time user - ask to set password
+
+    # Check if user requires password but hasn't set it yet
+    if is_password_required(user) and not is_password_set(user):
+        # MUST set password before using any bot features
         await state.set_state(PasswordSetup.waiting_for_password)
         welcome_text = (
             f"🎯 **Welcome to TourStats Bot!**\n\n"
-            f"I'm your AI assistant for tour guides. "
-            f"Simply send me messages about your excursions and I'll:\n\n"
-            f"📝 Extract statistics from your descriptions\n"
-            f"📊 Save and analyze your tour data\n"
-            f"📈 Find correlations and insights\n\n"
-            f"🔐 **First, let's set up a password for your account.**\n"
-            f"This password is required to access your data from the web app.\n"
+            f"🔐 **Password Required**\n\n"
+            f"Before you can use this bot, you need to set a password.\n"
+            f"This password is required to access your data from the web app.\n\n"
             f"Please send me a password (at least 4 characters):"
         )
+        await message.answer(welcome_text, parse_mode="Markdown")
     else:
-        # Existing user with password
-        welcome_text = (
-            f"🎯 **Welcome back to TourStats Bot!**\n\n"
-            f"I'm your AI assistant for tour guides. "
-            f"Simply send me messages about your excursions and I'll:\n\n"
-            f"📝 Extract statistics from your descriptions\n"
-            f"📊 Save and analyze your tour data\n"
-            f"📈 Find correlations and insights\n\n"
-            f"Use the menu below to view your statistics, or just chat with me about your tours!"
-        )
-
-    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
+        # User either doesn't require password or already set it
+        if is_password_set(user):
+            welcome_text = (
+                f"🎯 **Welcome back to TourStats Bot!**\n\n"
+                f"🔐 Password protection is enabled for your account.\n\n"
+                f"I'm your AI assistant for tour guides. "
+                f"Simply send me messages about your excursions and I'll:\n\n"
+                f"📝 Extract statistics from your descriptions\n"
+                f"📊 Save and analyze your tour data\n"
+                f"📈 Find correlations and insights\n\n"
+                f"Use the menu below to view your statistics, or just chat with me about your tours!"
+            )
+        else:
+            # This shouldn't happen for Telegram users, but just in case
+            welcome_text = (
+                f"🎯 **Welcome to TourStats Bot!**\n\n"
+                f"I'm your AI assistant for tour guides. "
+                f"Simply send me messages about your excursions and I'll:\n\n"
+                f"📝 Extract statistics from your descriptions\n"
+                f"📊 Save and analyze your tour data\n"
+                f"📈 Find correlations and insights\n\n"
+                f"Use the menu below to view your statistics, or just chat with me about your tours!"
+            )
+        
+        await message.answer(welcome_text, parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
 
 
 @router.message(Command("menu"))
-async def cmd_menu(message: Message):
+async def cmd_menu(message: Message, state: FSMContext):
     """Show main menu"""
-    await ensure_user_registered(message.from_user.id, message.from_user.username)
+    user = await ensure_user_registered(message.from_user.id, message.from_user.username)
+    
+    # Block if password not set
+    if is_password_required(user) and not is_password_set(user):
+        await message.answer(
+            "🔐 **Password Required**\n\n"
+            "You must set a password before using the bot.\n"
+            "Please send me a password (at least 4 characters):"
+        )
+        await state.set_state(PasswordSetup.waiting_for_password)
+        return
+    
     await message.answer("📱 **Main Menu**", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
 
 
@@ -211,22 +242,32 @@ async def handle_chat_message(message: Message, state: FSMContext):
     # Ignore commands
     if message.text and message.text.startswith('/'):
         return
-    
+
     # Check if user is in password setup mode
     current_state = await state.get_state()
     if current_state:
         # User is in FSM state, let the FSM handlers process
         return
-    
+
     try:
         user = await ensure_user_registered(message.from_user.id, message.from_user.username)
         
+        # Block if password required but not set
+        if is_password_required(user) and not is_password_set(user):
+            await message.answer(
+                "🔐 **Password Required**\n\n"
+                "You must set a password before using the bot.\n"
+                "Please send me a password (at least 4 characters):"
+            )
+            await state.set_state(PasswordSetup.waiting_for_password)
+            return
+
         # Send message to backend for AI processing
         result = await backend_service.send_message_to_backend(user["id"], message.text)
-        
+
         # Get AI response
         ai_response = result.get("ai_response", "I've processed your message.")
-        
+
         # Add confirmation messages if applicable
         confirmations = []
         if result.get("excursion_stored"):
@@ -234,18 +275,18 @@ async def handle_chat_message(message: Message, state: FSMContext):
         if result.get("excursion_updated"):
             updated_id = result.get("updated_excursion_id")
             confirmations.append(f"📝 Excursion #{updated_id} updated!")
-        
+
         # Build response
         response_parts = []
         if confirmations:
             response_parts.extend(confirmations)
             response_parts.append("")  # Empty line
         response_parts.append(ai_response)
-        
+
         response_text = "\n".join(response_parts)
-        
+
         await message.answer(response_text, parse_mode="Markdown")
-        
+
     except Exception as e:
         logger.error(f"Error processing message: {e}")
         await message.answer(
@@ -261,9 +302,21 @@ async def callback_back_to_menu(callback: CallbackQuery):
 
 
 @router.callback_query(lambda c: c.data == "stats_refresh")
-async def callback_stats_refresh(callback: CallbackQuery):
+async def callback_stats_refresh(callback: CallbackQuery, state: FSMContext):
     """Handle refresh statistics button"""
     user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
+    
+    # Block if password not set
+    if is_password_required(user) and not is_password_set(user):
+        await callback.message.edit_text(
+            "🔐 **Password Required**\n\n"
+            "You must set a password before viewing statistics.\n"
+            "Please send me a password (at least 4 characters):",
+            parse_mode="Markdown"
+        )
+        await state.set_state(PasswordSetup.waiting_for_password)
+        await callback.answer()
+        return
 
     # Clear cache
     user_cache[callback.from_user.id]["backend_user"] = None

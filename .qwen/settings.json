@@ -21,7 +21,10 @@
       "Bash(python *)",
       "Bash(docker system *)",
       "Bash(curl *)",
-      "Bash(echo.)"
+      "Bash(echo.)",
+      "Bash(docker *)",
+      "Bash(start *)",
+      "Bash(del *)"
     ]
   },
   "$version": 3
