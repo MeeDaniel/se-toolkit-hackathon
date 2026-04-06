@@ -10,23 +10,23 @@ function App() {
 
   const handleLogin = (userData) => {
     setUser(userData);
-    localStorage.setItem('tourstats_user', JSON.stringify(userData));
+    localStorage.setItem('hackathon_user', JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     setUser(null);
     setActiveTab('chat');
-    localStorage.removeItem('tourstats_user');
+    localStorage.removeItem('hackathon_user');
   };
 
   // Check for saved session on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('tourstats_user');
+    const savedUser = localStorage.getItem('hackathon_user');
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser));
       } catch (e) {
-        localStorage.removeItem('tourstats_user');
+        localStorage.removeItem('hackathon_user');
       }
     }
   }, []);
@@ -40,7 +40,7 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <div>
-            <h1>🎯 TourStats</h1>
+            <h1>🎯 Hackathon</h1>
             <p className="subtitle">AI-Powered Analytics for Tour Guides</p>
           </div>
           <div className="user-info">

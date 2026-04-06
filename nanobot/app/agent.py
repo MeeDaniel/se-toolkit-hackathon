@@ -50,7 +50,7 @@ class NanobotAgent:
             # Send welcome message
             await websocket.send(json.dumps({
                 "type": "welcome",
-                "message": "Connected to TourStats AI Assistant"
+                "message": "Connected to Hackathon AI Assistant"
             }))
 
             # Handle messages

@@ -1,7 +1,7 @@
 [project]
-name = "tourstats-telegram-bot"
+name = "hackathon-telegram-bot"
 version = "0.1.0"
-description = "TourStats Telegram Bot"
+description = "Hackathon Telegram Bot"
 requires-python = ">=3.11"
 dependencies = [
     "aiogram>=3.4.0",

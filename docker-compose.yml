@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - tourstats-network
+      - hackathon-network
 
   # FastAPI Backend
   backend:
@@ -34,7 +34,7 @@ services:
       NANOBOT_WS_URL: ${NANOBOT_WS_URL:-ws://nanobot:8000/ws}
       BACKEND_SECRET: ${BACKEND_SECRET:-changeme_backend_secret_123}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-tourstats-backend}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-hackathon-backend}
     ports:
       - "8000:8000"
     depends_on:
@@ -43,7 +43,7 @@ services:
     volumes:
       - ./backend:/app
     networks:
-      - tourstats-network
+      - hackathon-network
 
   # Nanobot AI Agent
   nanobot:
@@ -60,14 +60,14 @@ services:
       BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
       MCP_CONFIG_PATH: /app/mcp
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-tourstats-nanobot}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-hackathon-nanobot}
     ports:
       - "8001:8000"
     volumes:
       - ./nanobot:/app
       - ./mcp:/app/mcp:ro
     networks:
-      - tourstats-network
+      - hackathon-network
 
   # React Web Client
   client:
@@ -87,7 +87,7 @@ services:
       - ./client-web-react:/app
       - /app/node_modules
     networks:
-      - tourstats-network
+      - hackathon-network
 
   # Caddy Reverse Proxy
   caddy:
@@ -104,7 +104,7 @@ services:
       - client
       - nanobot
     networks:
-      - tourstats-network
+      - hackathon-network
 
   # OpenTelemetry Collector (Optional)
   otel-collector:
@@ -116,7 +116,7 @@ services:
       - "4317:4317"
       - "4318:4318"
     networks:
-      - tourstats-network
+      - hackathon-network
 
 volumes:
   postgres_data:
@@ -124,5 +124,5 @@ volumes:
   caddy_config:
 
 networks:
-  tourstats-network:
+  hackathon-network:
     driver: bridge

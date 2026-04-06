@@ -1,7 +1,7 @@
 [project]
-name = "tourstats-backend"
+name = "hackathon-backend"
 version = "0.1.0"
-description = "TourStats backend API"
+description = "Hackathon backend API"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.109.0",

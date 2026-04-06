@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="TourStats API",
+    title="Hackathon API",
     description="AI-powered statistics app for Innopolis tour guides",
     version="0.1.0",
     lifespan=lifespan,
@@ -97,7 +97,7 @@ async def health_check():
 @app.get("/")
 async def root():
     return {
-        "message": "TourStats API",
+        "message": "Hackathon API",
         "docs": "/api/docs",
         "health": "/api/health",
     }

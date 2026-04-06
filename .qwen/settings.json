@@ -24,7 +24,13 @@
       "Bash(echo.)",
       "Bash(docker *)",
       "Bash(start *)",
-      "Bash(del *)"
+      "Bash(del *)",
+      "Bash(git commit *)",
+      "Bash(gh *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git branch *)",
+      "Bash(ren *)"
     ]
   },
   "$version": 3

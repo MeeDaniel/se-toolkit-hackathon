@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # OpenTelemetry
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://otel-collector:4317"
-    OTEL_SERVICE_NAME: str = "tourstats-nanobot"
+    OTEL_SERVICE_NAME: str = "hackathon-nanobot"
     
     DEBUG: bool = False
 

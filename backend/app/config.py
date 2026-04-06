@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # OpenTelemetry
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://otel-collector:4317"
-    OTEL_SERVICE_NAME: str = "tourstats-backend"
+    OTEL_SERVICE_NAME: str = "hackathon-backend"
 
     class Config:
         env_file = ".env"

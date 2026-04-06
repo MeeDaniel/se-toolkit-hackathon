@@ -1,7 +1,7 @@
 [project]
-name = "tourstats-nanobot"
+name = "hackathon-nanobot"
 version = "0.1.0"
-description = "TourStats AI Agent"
+description = "Hackathon AI Agent"
 requires-python = ">=3.11"
 dependencies = [
     "websockets>=12.0",
