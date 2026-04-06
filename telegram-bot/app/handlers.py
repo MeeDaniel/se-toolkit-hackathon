@@ -275,11 +275,39 @@ async def callback_excursions_pagination(callback: CallbackQuery):
 
 @router.callback_query(lambda c: c.data == "stats_excursions")
 async def callback_stats_excursions(callback: CallbackQuery):
-    """Handle excursions list button"""
-    user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
-    
-    # Reset offset
-    user_cache[callback.from_user.id]["excursions_offset"] = 0
-    
-    await callback.answer()
-    await callback_excursions_pagination(callback)
+    """Handle excursions list button - initial load with offset 0"""
+    try:
+        user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
+
+        await callback.answer()
+
+        excursions = await backend_service.get_excursions(user["id"], offset=0, limit=10)
+
+        if not excursions:
+            text = "📋 No excursions found.\n\nSend me a message about your tour to get started!"
+        else:
+            text = "📋 **Recent Excursions**\n\n"
+            for exc in excursions[:5]:
+                interests = exc.get("interests_list", "None")
+                text += (
+                    f"**#{exc['id']}** | {exc['number_of_tourists']} tourists | Age {exc['average_age']:.0f}\n"
+                    f"⚡ {exc['vivacity_before']*100:.0f}% → {exc['vivacity_after']*100:.0f}% | "
+                    f"💻 IT: {exc['interest_in_it']*100:.0f}%\n"
+                    f"🏷️ {interests}\n\n"
+                )
+
+            if len(excursions) > 5:
+                text += f"...and {len(excursions) - 5} more"
+
+        has_more = len(excursions) >= 10
+        keyboard = get_excursions_pagination_keyboard(0, has_more)
+
+        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
+
+    except Exception as e:
+        logger.error(f"Error getting excursions: {e}")
+        await callback.message.answer(
+            "❌ Error loading excursions. Please try again.",
+            reply_markup=get_back_to_menu_keyboard()
+        )
+        await callback.answer()
