@@ -21,7 +21,6 @@ def get_user_cache(user_id: int) -> dict:
     if user_id not in user_cache:
         user_cache[user_id] = {
             "backend_user": None,
-            "excursions_offset": 0
         }
     return user_cache[user_id]
 
@@ -40,7 +39,7 @@ async def ensure_user_registered(user_id: int, username: str = None) -> dict:
 async def cmd_start(message: Message):
     """Handle /start command"""
     user = await ensure_user_registered(message.from_user.id, message.from_user.username)
-    
+
     welcome_text = (
         f"🎯 **Welcome to TourStats Bot!**\n\n"
         f"I'm your AI assistant for tour guides. "
@@ -50,7 +49,7 @@ async def cmd_start(message: Message):
         f"📈 Find correlations and insights\n\n"
         f"Use the menu below to view your statistics, or just chat with me about your tours!"
     )
-    
+
     await message.answer(welcome_text, parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
 
 
@@ -79,7 +78,7 @@ async def cmd_help(message: Message):
         "• 'Had 20 tourists, average age 30, very interested in education history'\n"
         "• 'Excursion #26 actually had 25 tourists' (to update existing data)"
     )
-    
+
     await message.answer(help_text, parse_mode="Markdown")
 
 
@@ -89,16 +88,16 @@ async def handle_chat_message(message: Message):
     # Ignore commands
     if message.text and message.text.startswith('/'):
         return
-    
+
     try:
         user = await ensure_user_registered(message.from_user.id, message.from_user.username)
-        
+
         # Send message to backend for AI processing
         result = await backend_service.send_message_to_backend(user["id"], message.text)
-        
+
         # Get AI response
         ai_response = result.get("ai_response", "I've processed your message.")
-        
+
         # Add confirmation messages if applicable
         confirmations = []
         if result.get("excursion_stored"):
@@ -106,18 +105,18 @@ async def handle_chat_message(message: Message):
         if result.get("excursion_updated"):
             updated_id = result.get("updated_excursion_id")
             confirmations.append(f"📝 Excursion #{updated_id} updated!")
-        
+
         # Build response
         response_parts = []
         if confirmations:
             response_parts.extend(confirmations)
             response_parts.append("")  # Empty line
         response_parts.append(ai_response)
-        
+
         response_text = "\n".join(response_parts)
-        
+
         await message.answer(response_text, parse_mode="Markdown")
-        
+
     except Exception as e:
         logger.error(f"Error processing message: {e}")
         await message.answer(
@@ -136,10 +135,10 @@ async def callback_back_to_menu(callback: CallbackQuery):
 async def callback_stats_refresh(callback: CallbackQuery):
     """Handle refresh statistics button"""
     user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
-    
+
     # Clear cache
     user_cache[callback.from_user.id]["backend_user"] = None
-    
+
     await callback.message.edit_text(
         "🔄 Data refreshed! Use the menu to view your updated statistics.",
         reply_markup=get_main_menu_keyboard()
@@ -152,11 +151,11 @@ async def callback_stats_overview(callback: CallbackQuery):
     """Handle statistics overview button"""
     try:
         user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
-        
+
         await callback.answer()
-        
+
         stats = await backend_service.get_statistics(user["id"])
-        
+
         if stats["total_excursions"] == 0:
             text = (
                 "📊 **Your Statistics**\n\n"
@@ -175,9 +174,9 @@ async def callback_stats_overview(callback: CallbackQuery):
                 f"🏷️ **Top Interests:**\n"
                 f"{', '.join(stats['top_interests'][:5]) if stats['top_interests'] else 'None yet'}"
             )
-        
+
         await callback.message.answer(text, parse_mode="Markdown", reply_markup=get_back_to_menu_keyboard())
-        
+
     except Exception as e:
         logger.error(f"Error getting statistics: {e}")
         await callback.message.answer(
@@ -192,11 +191,11 @@ async def callback_stats_correlations(callback: CallbackQuery):
     """Handle correlations button"""
     try:
         user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
-        
+
         await callback.answer()
-        
+
         corr = await backend_service.get_correlations(user["id"])
-        
+
         if "message" in corr:
             text = (
                 f"📈 **Correlations**\n\n"
@@ -206,13 +205,13 @@ async def callback_stats_correlations(callback: CallbackQuery):
         else:
             summary = corr.get("summary", {})
             top_corrs = summary.get("most_interesting_correlations", [])
-            
+
             text = "📈 **Key Insights**\n\n"
-            
+
             # Add summary
             text += f"👥 Avg Group Size: {summary.get('avg_group_size', 0):.1f}\n"
             text += f"⚡ Avg Energy Boost: +{summary.get('avg_vivacity_boost', 0)*100:.0f}%\n\n"
-            
+
             if top_corrs:
                 text += "**Top Correlations Found:**\n\n"
                 for i, corr_item in enumerate(top_corrs[:3], 1):
@@ -220,9 +219,9 @@ async def callback_stats_correlations(callback: CallbackQuery):
                     text += f"   {corr_item['interpretation']}\n\n"
             else:
                 text += "No significant correlations found yet. Add more excursions!"
-        
+
         await callback.message.answer(text, parse_mode="Markdown", reply_markup=get_back_to_menu_keyboard())
-        
+
     except Exception as e:
         logger.error(f"Error getting correlations: {e}")
         await callback.message.answer(
@@ -232,38 +231,46 @@ async def callback_stats_correlations(callback: CallbackQuery):
         await callback.answer()
 
 
-@router.callback_query(lambda c: c.data.startswith("excursions_"))
-async def callback_excursions_pagination(callback: CallbackQuery):
-    """Handle excursions pagination"""
+async def send_excursions_page(callback: CallbackQuery, offset: int):
+    """Send a page of excursions"""
+    user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
+
+    # Fetch excursions for this page (5 items per page)
+    excursions = await backend_service.get_excursions(user["id"], offset=offset, limit=5)
+
+    if not excursions:
+        text = "📋 No excursions found."
+        keyboard = get_back_to_menu_keyboard()
+    else:
+        # Check if there are more pages by fetching 1 extra item
+        next_check = await backend_service.get_excursions(user["id"], offset=offset + 5, limit=1)
+        has_next = len(next_check) > 0
+        is_first_page = (offset == 0)
+
+        # Format excursions text
+        text = f"📋 **Excursions** (showing {offset + 1}-{offset + len(excursions)})\n\n"
+
+        for i, exc in enumerate(excursions, start=1):
+            interests = exc.get("interests_list", "None")
+            text += (
+                f"**{offset + i}.** #{exc['id']} | {exc['number_of_tourists']} tourists | Age {exc['average_age']:.0f}\n"
+                f"⚡ {exc['vivacity_before']*100:.0f}% → {exc['vivacity_after']*100:.0f}% | "
+                f"💻 IT: {exc['interest_in_it']*100:.0f}%\n"
+                f"🏷️ {interests}\n\n"
+            )
+
+        keyboard = get_excursions_pagination_keyboard(offset, has_next, is_first_page)
+
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
+
+
+@router.callback_query(lambda c: c.data == "stats_excursions")
+async def callback_stats_excursions(callback: CallbackQuery):
+    """Handle excursions list button - initial load with offset 0"""
     try:
-        offset = int(callback.data.split("_")[1])
-        user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
-        
         await callback.answer()
-        
-        excursions = await backend_service.get_excursions(user["id"], offset=offset, limit=10)
-        
-        if not excursions:
-            text = "📋 No excursions found."
-        else:
-            text = "📋 **Recent Excursions**\n\n"
-            for exc in excursions[:5]:  # Show max 5 per message
-                interests = exc.get("interests_list", "None")
-                text += (
-                    f"**#{exc['id']}** | {exc['number_of_tourists']} tourists | Age {exc['average_age']:.0f}\n"
-                    f"⚡ {exc['vivacity_before']*100:.0f}% → {exc['vivacity_after']*100:.0f}% | "
-                    f"💻 IT: {exc['interest_in_it']*100:.0f}%\n"
-                    f"🏷️ {interests}\n\n"
-                )
-            
-            if len(excursions) > 5:
-                text += f"...and {len(excursions) - 5} more"
-        
-        has_more = len(excursions) >= 10
-        keyboard = get_excursions_pagination_keyboard(offset, has_more)
-        
-        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
-        
+        await send_excursions_page(callback, offset=0)
+
     except Exception as e:
         logger.error(f"Error getting excursions: {e}")
         await callback.message.answer(
@@ -273,36 +280,14 @@ async def callback_excursions_pagination(callback: CallbackQuery):
         await callback.answer()
 
 
-@router.callback_query(lambda c: c.data == "stats_excursions")
-async def callback_stats_excursions(callback: CallbackQuery):
-    """Handle excursions list button - initial load with offset 0"""
+@router.callback_query(lambda c: c.data.startswith("excursions_"))
+async def callback_excursions_pagination(callback: CallbackQuery):
+    """Handle excursions pagination"""
     try:
-        user = await ensure_user_registered(callback.from_user.id, callback.from_user.username)
-
+        parts = callback.data.split("_")
+        offset = int(parts[1])
         await callback.answer()
-
-        excursions = await backend_service.get_excursions(user["id"], offset=0, limit=10)
-
-        if not excursions:
-            text = "📋 No excursions found.\n\nSend me a message about your tour to get started!"
-        else:
-            text = "📋 **Recent Excursions**\n\n"
-            for exc in excursions[:5]:
-                interests = exc.get("interests_list", "None")
-                text += (
-                    f"**#{exc['id']}** | {exc['number_of_tourists']} tourists | Age {exc['average_age']:.0f}\n"
-                    f"⚡ {exc['vivacity_before']*100:.0f}% → {exc['vivacity_after']*100:.0f}% | "
-                    f"💻 IT: {exc['interest_in_it']*100:.0f}%\n"
-                    f"🏷️ {interests}\n\n"
-                )
-
-            if len(excursions) > 5:
-                text += f"...and {len(excursions) - 5} more"
-
-        has_more = len(excursions) >= 10
-        keyboard = get_excursions_pagination_keyboard(0, has_more)
-
-        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await send_excursions_page(callback, offset=offset)
 
     except Exception as e:
         logger.error(f"Error getting excursions: {e}")
