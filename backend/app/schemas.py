@@ -98,6 +98,8 @@ class ExcursionResponseWithAI(BaseModel):
     excursion_stored: bool
     excursion_updated: bool
     updated_excursion_id: Optional[int] = None
+    excursion_deleted: bool = False
+    delete_message: Optional[str] = None
 
 
 class StatisticsResponse(BaseModel):

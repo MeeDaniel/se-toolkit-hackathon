@@ -35,7 +35,7 @@ CRITICAL RULES:
    - vivacity_before: float (0-1, energy level before tour)
    - vivacity_after: float (0-1, energy level after tour)
    - interest_in_it: float (0-1, interest in IT topics)
-   - interests_list: space-separated keywords (CRITICAL: The database stores keywords separated by SPACES. Therefore each keyword MUST be exactly ONE WORD with ZERO spaces. Multi-word phrases like "machine learning" will be stored as TWO separate keywords "machine" and "learning" which breaks the data. You MUST convert all multi-word concepts to single words or acronyms. Examples: "machine learning"→"ML", "artificial intelligence"→"AI", "data science"→"datascience" or "DS", "computer vision"→"CV", "natural language processing"→"NLP". Remove all conjunctions ("and", "or"). Format: single words only separated by spaces. CORRECT: "robotics AI ML DS". WRONG: "robotics and AI" or "machine learning" or "data science".)
+   - interests_list: space-separated keywords (CRITICAL INSTRUCTION: Each keyword MUST be a SINGLE WORD only with ZERO spaces. The database stores keywords separated by spaces, so multi-word phrases like "artificial intelligence" will be interpreted as TWO separate keywords "artificial" and "intelligence". You MUST convert ALL multi-word concepts to single words or acronyms. Examples: "machine learning"→"ML", "artificial intelligence"→"AI", "data science"→"datascience", "computer vision"→"CV", "natural language processing"→"NLP", "software engineering"→"SE". Remove all conjunctions like "and", "or", "the". CORRECT format: "robotics AI ML datascience CV". WRONG formats: "robotics and AI" or "machine learning" or "data science". If unsure, use acronyms or combine words: "web development"→"webdev", "mobile apps"→"mobile".)
    - confidence: float (0-1, how confident you are about the extraction). Set to 0.0 if the message is not about excursions.
 
 Return ONLY a valid JSON array of excursion objects. Use null for unknown fields.
@@ -110,7 +110,8 @@ JSON response (array of objects, can be empty if not about excursions):"""
         prompt = f"""You are a helpful AI assistant for Innopolis tour guides. Your job is to:
 1. Extract excursion data from tour descriptions (if present)
 2. Detect if user wants to UPDATE an existing excursion
-3. Respond helpfully to the user's message
+3. Detect if user wants to DELETE an existing excursion
+4. Respond helpfully to the user's message
 
 EDITING CAPABILITIES:
 - You CAN update existing excursions when users request it
@@ -123,6 +124,17 @@ EDITING CAPABILITIES:
   * excursion_id (the number after # or "excursion")
   * which fields to update (number_of_tourists, average_age, vivacity_before, vivacity_after, interest_in_it, interests_list)
   * new values for those fields
+
+DELETION CAPABILITIES:
+- You CAN delete excursions when users explicitly request it
+- Users may say things like:
+  * "Delete excursion #26"
+  * "Remove excursion 25"
+  * "Delete the last excursion"
+  * "Excursion 24 should be deleted"
+- When deleting, identify:
+  * excursion_id (the number to delete)
+  * Set "delete": true and "excursion_id": <number>
 
 FORMAT YOUR RESPONSE AS JSON:
 {{
@@ -143,7 +155,10 @@ FORMAT YOUR RESPONSE AS JSON:
     "number_of_tourists": 20,
     "average_age": 30.0
   }},
-  "response": "Your conversational response to the user goes here. Use **bold** for emphasis, *italic* for secondary emphasis, bullet points with -, numbered lists. No # headers. If you updated an excursion, confirm the changes."
+  "delete": {{
+    "excursion_id": 25
+  }},
+  "response": "Your conversational response to the user goes here. Use **bold** for emphasis, *italic* for secondary emphasis, bullet points with -, numbered lists. No # headers. If you updated or deleted an excursion, confirm the changes."
 }}
 
 EXTRACTION RULES:
@@ -203,15 +218,21 @@ JSON response:"""
             
             batch = ExcursionBatch(excursions=excursions, raw_message=message)
             ai_response = data.get("response", "I've processed your message.")
-            
+
             # Check for update request
             update_data = data.get("update")
             if update_data and "excursion_id" in update_data:
                 # Remove excursion_id from update_data (it's handled separately)
                 excursion_id = update_data.pop("excursion_id")
                 update_data["excursion_id"] = excursion_id
-            
-            return batch, ai_response, update_data
+
+            # Check for delete request
+            delete_data = data.get("delete")
+            if delete_data and "excursion_id" in delete_data:
+                # Keep excursion_id in delete_data
+                pass
+
+            return batch, ai_response, update_data, delete_data
 
         except Exception as e:
             error_msg = str(e)
@@ -220,7 +241,7 @@ JSON response:"""
             # Fallback to separate calls on parse error
             batch = await self.extract_excursion_data(message)
             response = await self.analyze_statistics(message, "")
-            return batch, response, None
+            return batch, response, None, None
 
     async def analyze_statistics(self, query: str, context: str) -> str:
         """Answer natural language questions about excursion statistics"""

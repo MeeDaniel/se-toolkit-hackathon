@@ -44,20 +44,28 @@ function ChatInterface({ user }) {
       } else if (data.type === 'chat_response') {
         setMessages(prev => [...prev, { type: 'bot', message: data.message }]);
         setIsLoading(false);
-        
+
         // If excursion was stored, create a system message
         if (data.excursion_stored) {
-          setMessages(prev => [...prev, { 
-            type: 'system', 
-            message: '✅ Excursion data saved to your statistics!' 
+          setMessages(prev => [...prev, {
+            type: 'system',
+            message: '✅ Excursion data saved to your statistics!'
           }]);
         }
-        
+
         // If excursion was updated, create a system message
         if (data.excursion_updated) {
-          setMessages(prev => [...prev, { 
-            type: 'system', 
-            message: '📝 Excursion updated successfully!' 
+          setMessages(prev => [...prev, {
+            type: 'system',
+            message: '📝 Excursion updated successfully!'
+          }]);
+        }
+
+        // If excursion was deleted, create a system message
+        if (data.excursion_deleted) {
+          setMessages(prev => [...prev, {
+            type: 'system',
+            message: `🗑️ ${data.delete_message || 'Excursion deleted successfully!'}`
           }]);
         }
       } else if (data.type === 'error') {

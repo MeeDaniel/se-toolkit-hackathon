@@ -71,18 +71,18 @@ async def create_excursion_from_message(
     db: AsyncSession = Depends(get_db),
 ):
     """Create excursion(s) AND generate AI response in a single API call.
-    Also handles UPDATE requests for existing excursions.
+    Also handles UPDATE and DELETE requests for existing excursions.
     This reduces response time from ~15s to ~5-10s by combining extraction + response.
     """
-    # Single API call extracts data, detects updates, AND generates response
-    batch, ai_response, update_data = await ai_service.extract_and_respond(data.message)
-    
+    # Single API call extracts data, detects updates/deletes, AND generates response
+    batch, ai_response, update_data, delete_data = await ai_service.extract_and_respond(data.message)
+
     # Handle UPDATE request if detected
     excursion_updated = False
     updated_excursion_id = None
     if update_data and "excursion_id" in update_data:
         excursion_id = update_data.pop("excursion_id")
-        
+
         # Verify ownership
         result = await db.execute(
             select(Excursion).where(
@@ -91,18 +91,39 @@ async def create_excursion_from_message(
             )
         )
         excursion = result.scalar_one_or_none()
-        
+
         if excursion:
             # Update only provided fields
             for field, value in update_data.items():
                 if hasattr(excursion, field) and value is not None:
                     setattr(excursion, field, value)
-            
+
             await db.flush()
             await db.refresh(excursion)
             excursion_updated = True
             updated_excursion_id = excursion_id
-    
+
+    # Handle DELETE request if detected
+    excursion_deleted = False
+    delete_message = ""
+    if delete_data and "excursion_id" in delete_data:
+        excursion_id = delete_data["excursion_id"]
+
+        # Verify ownership
+        result = await db.execute(
+            select(Excursion).where(
+                Excursion.id == excursion_id,
+                Excursion.user_id == data.user_id
+            )
+        )
+        excursion = result.scalar_one_or_none()
+
+        if excursion:
+            await db.delete(excursion)
+            await db.flush()
+            excursion_deleted = True
+            delete_message = f"Excursion #{excursion_id} has been deleted."
+
     # Save each new excursion separately
     created = []
     for extracted in batch.excursions:
@@ -121,13 +142,15 @@ async def create_excursion_from_message(
         await db.flush()
         await db.refresh(db_excursion)
         created.append(db_excursion)
-    
+
     return ExcursionResponseWithAI(
         excursions=created,
         ai_response=ai_response,
         excursion_stored=len(created) > 0,
         excursion_updated=excursion_updated,
-        updated_excursion_id=updated_excursion_id
+        updated_excursion_id=updated_excursion_id,
+        excursion_deleted=excursion_deleted,
+        delete_message=delete_message
     )
 
 

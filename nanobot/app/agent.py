@@ -126,17 +126,24 @@ class NanobotAgent:
                 if response.status_code == 200:
                     data = response.json()
                     ai_response = data.get("ai_response", "I've processed your message.")
-                    
+
                     # Add update confirmation to response if applicable
                     if data.get("excursion_updated"):
                         updated_id = data.get("updated_excursion_id")
                         ai_response = f"✅ **Excursion #{updated_id} updated successfully!**\n\n{ai_response}"
-                    
+
+                    # Add delete confirmation to response if applicable
+                    if data.get("excursion_deleted"):
+                        delete_msg = data.get("delete_message", "Excursion deleted successfully!")
+                        ai_response = f"🗑️ {delete_msg}\n\n{ai_response}"
+
                     return {
                         "type": "chat_response",
                         "message": ai_response,
                         "excursion_stored": data.get("excursion_stored", False),
-                        "excursion_updated": data.get("excursion_updated", False)
+                        "excursion_updated": data.get("excursion_updated", False),
+                        "excursion_deleted": data.get("excursion_deleted", False),
+                        "delete_message": data.get("delete_message", "")
                     }
                 else:
                     return {

@@ -100,6 +100,24 @@ function StatisticsDashboard({ user, refreshTrigger }) {
     }
   };
 
+  const deleteExcursion = async (excursionId) => {
+    if (!window.confirm('Are you sure you want to delete this excursion? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `${API_URL}/api/excursions/${excursionId}`,
+        { params: { user_id: user.id } }
+      );
+      // Refresh data after delete
+      fetchData(user.id, 0);
+    } catch (error) {
+      console.error('Error deleting excursion:', error);
+      alert('Failed to delete excursion');
+    }
+  };
+
   if (loading && excursions.length === 0) {
     return <div className="loading">Loading statistics...</div>;
   }
@@ -293,6 +311,7 @@ function StatisticsDashboard({ user, refreshTrigger }) {
                     <td className="interests-cell">{exc.interests_list}</td>
                     <td>
                       <button className="edit-btn" onClick={() => openEditModal(exc)}>✏️ Edit</button>
+                      <button className="delete-btn" onClick={() => deleteExcursion(exc.id)}>🗑️ Delete</button>
                     </td>
                   </tr>
                 ))}
