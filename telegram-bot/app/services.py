@@ -85,5 +85,39 @@ class BackendService:
             raise Exception(f"Backend error: {response.status_code} - {response.text}")
 
 
+    async def set_password(self, telegram_alias: str, password: str) -> dict:
+        """Set password for a user"""
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{self.backend_url}/api/users/set-password",
+                json={"telegram_alias": telegram_alias, "password": password}
+            )
+            if response.status_code == 200:
+                return response.json()
+            raise Exception(f"Failed to set password: {response.text}")
+    
+    async def change_password(self, telegram_alias: str, new_password: str) -> dict:
+        """Change password for a user"""
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{self.backend_url}/api/users/change-password",
+                json={"telegram_alias": telegram_alias, "new_password": new_password}
+            )
+            if response.status_code == 200:
+                return response.json()
+            raise Exception(f"Failed to change password: {response.text}")
+    
+    async def remove_password(self, telegram_alias: str) -> dict:
+        """Remove password protection"""
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{self.backend_url}/api/users/remove-password",
+                params={"telegram_alias": telegram_alias}
+            )
+            if response.status_code == 200:
+                return response.json()
+            raise Exception(f"Failed to remove password: {response.text}")
+
+
 # Singleton instance
 backend_service = BackendService()

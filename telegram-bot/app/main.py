@@ -3,6 +3,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.storage.memory import MemoryStorage
 from app.config import settings
 from app.handlers import router
 
@@ -16,12 +17,13 @@ logger = logging.getLogger(__name__)
 
 async def main():
     """Main bot entry point"""
-    # Initialize bot and dispatcher
+    # Initialize bot and dispatcher with FSM storage
     bot = Bot(
         token=settings.TELEGRAM_BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
     )
-    dp = Dispatcher()
+    storage = MemoryStorage()
+    dp = Dispatcher(storage=storage)
     
     # Include routers
     dp.include_router(router)

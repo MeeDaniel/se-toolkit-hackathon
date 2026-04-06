@@ -92,6 +92,21 @@
   box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
+.back-button {
+  padding: 12px 24px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.back-button:hover {
+  background: #e5e7eb;
+}
+
 .login-button:active {
   transform: translateY(0);
 }
