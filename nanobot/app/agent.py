@@ -80,18 +80,19 @@ class NanobotAgent:
         """Process incoming message and return response"""
         message_type = data.get("type", "chat")
         message = data.get("message", "")
+        user_id = data.get("user_id", 1)
 
         if message_type == "chat":
-            return await self.handle_chat(message)
+            return await self.handle_chat(message, user_id)
         elif message_type == "query_statistics":
-            return await self.handle_statistics_query(message)
+            return await self.handle_statistics_query(message, user_id)
         else:
             return {
                 "type": "error",
                 "message": f"Unknown message type: {message_type}"
             }
 
-    async def handle_chat(self, message: str) -> dict:
+    async def handle_chat(self, message: str, user_id: int = 1) -> dict:
         """Handle chat message with AI response - optimized single API call"""
         # Add to conversation history
         self.conversation_history.append({"role": "user", "content": message})
@@ -101,14 +102,14 @@ class NanobotAgent:
             self.conversation_history = self.conversation_history[-10:]
 
         # Single backend call: extracts data + saves to DB + generates response
-        result = await self.extract_and_respond(message)
+        result = await self.extract_and_respond(message, user_id)
 
         # Add response to history
         self.conversation_history.append({"role": "assistant", "content": result.get("message", "")})
 
         return result
 
-    async def extract_and_respond(self, message: str) -> dict:
+    async def extract_and_respond(self, message: str, user_id: int = 1) -> dict:
         """Call backend to extract data, save to DB, update if needed, and get AI response in one call"""
         try:
             import httpx
@@ -118,7 +119,7 @@ class NanobotAgent:
                 response = await client.post(
                     f"{self.mcp_tools.backend_url}/api/excursions/from-message",
                     json={
-                        "user_id": getattr(self, 'user_id', 1),
+                        "user_id": user_id,
                         "message": message
                     }
                 )

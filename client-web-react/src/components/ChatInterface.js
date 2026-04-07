@@ -102,7 +102,8 @@ function ChatInterface({ user }) {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'chat',
-        message: inputMessage
+        message: inputMessage,
+        user_id: user.id
       }));
     }
 
