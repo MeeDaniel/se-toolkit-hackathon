@@ -84,7 +84,7 @@ async def create_excursion_from_message(
         .order_by(Excursion.created_at.desc())
         .limit(10)
     )
-    recent_excursions = [
+    user_excursions = [
         {
             "id": e.id,
             "number_of_tourists": e.number_of_tourists,
@@ -95,13 +95,13 @@ async def create_excursion_from_message(
             "interests_list": e.interests_list,
             "created_at": str(e.created_at) if e.created_at else "",
         }
-        for e in recent_excursions
+        for e in recent_result.scalars().all()
     ]
 
     # Single API call with user's excursion context
     batch, ai_response, update_data, delete_data = await ai_service.extract_and_respond(
         data.message,
-        user_excursions=recent_excursions if recent_excursions else None,
+        user_excursions=user_excursions if user_excursions else None,
     )
 
     # Handle UPDATE request if detected
