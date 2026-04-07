@@ -1,9 +1,11 @@
 {$CADDY_DOMAIN:-localhost} {
 	encode gzip
-	reverse_proxy /api/* backend:8000
-	reverse_proxy /ws* {
-		to nanobot:8000
-		header_up X-Access-Key {$NANOBOT_ACCESS_KEY:-changeme_nanobot_key_123}
+	handle {
+		reverse_proxy /api/* backend:8000
+		reverse_proxy /ws* {
+			to nanobot:8000
+			header_up X-Access-Key {$NANOBOT_ACCESS_KEY:-changeme_nanobot_key_123}
+		}
+		reverse_proxy /* client:3000
 	}
-	reverse_proxy /* client:3000
 }
